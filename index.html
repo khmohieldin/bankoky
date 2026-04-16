@@ -10,6 +10,9 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- مكتبة الطباعة للـ PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -124,8 +127,17 @@
 </head>
 <body class="flex items-center justify-center min-h-screen">
 
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white dark:bg-slate-900 z-[100] flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="w-16 h-16 border-4 border-blue-200 border-t-primary rounded-full animate-spin"></div>
+        <p class="mt-4 font-bold text-lg dark-text">جاري التحميل...</p>
+    </div>
+
     <!-- Auth / Login Screen -->
-    <div id="auth-screen" class="fixed inset-0 bg-slate-100 dark:bg-slate-900 flex items-center justify-center z-50 p-4 transition-opacity duration-500 overflow-y-auto">
+    <div id="auth-screen" class="fixed inset-0 bg-slate-100 dark:bg-slate-900 flex items-center justify-center z-50 p-4 transition-opacity duration-500 overflow-y-auto hidden">
         <div class="dark-card p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center relative overflow-hidden border border-transparent my-auto">
             <div class="absolute top-0 left-0 w-full h-40 bg-gradient-to-br from-primary to-blue-500 opacity-10 rounded-b-[60%]"></div>
             <div class="relative z-10">
@@ -152,7 +164,7 @@
                     <p class="dark-subtext mb-8 font-medium">ابدأ بتنظيم أموالك كالمحترفين</p>
                     <form id="register-form" class="space-y-4">
                         <input type="email" id="register-email" placeholder="البريد الإلكتروني" class="w-full p-4 rounded-2xl input-modern text-right font-medium" required>
-                        <input type="password" id="register-password" placeholder="كلمة المرور" class="w-full p-4 rounded-2xl input-modern text-right font-medium" required>
+                        <input type="password" id="register-password" placeholder="كلمة المرور (6 أحرف على الأقل)" class="w-full p-4 rounded-2xl input-modern text-right font-medium" required minlength="6">
                         <button type="submit" class="w-full bg-gradient-to-l from-secondary to-emerald-400 text-white p-4 rounded-2xl font-bold text-lg hover:opacity-90 active:scale-95 transition-all shadow-xl shadow-green-500/30">إنشاء حسابي</button>
                     </form>
                     <p class="mt-8 text-sm dark-subtext font-medium">لديك حساب بالفعل؟ <button id="show-login" class="font-bold text-primary hover:text-blue-700 transition-colors">تسجيل الدخول</button></p>
@@ -424,6 +436,28 @@
                         تصدير السجلات (Excel)
                     </span>
                 </button>
+
+                <button onclick="downloadPDF()" class="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm border border-slate-100 dark:border-slate-700 mt-3">
+                    <span class="font-bold dark-text flex items-center gap-3 text-sm">
+                        <div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-primary"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></div>
+                        تنزيل السجلات (PDF)
+                    </span>
+                </button>
+
+                <button onclick="exportDataToJSON()" class="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm border border-slate-100 dark:border-slate-700 mt-3">
+                    <span class="font-bold dark-text flex items-center gap-3 text-sm">
+                        <div class="p-2 bg-amber-50 dark:bg-amber-900/30 rounded-xl text-amber-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg></div>
+                        حفظ نسخة لبياناتك
+                    </span>
+                </button>
+
+                <button onclick="document.getElementById('import-json-input').click()" class="flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm border border-slate-100 dark:border-slate-700 mt-3">
+                    <span class="font-bold dark-text flex items-center gap-3 text-sm">
+                        <div class="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl text-purple-500"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg></div>
+                        استرجاع بيانات (من ملف)
+                    </span>
+                </button>
+                <input type="file" id="import-json-input" accept=".json" class="hidden" onchange="importDataFromJSON(event)">
             </div>
 
             <div class="dark-card p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700">
@@ -441,7 +475,7 @@
             <!-- Calculator -->
             <div>
                 <h3 class="font-bold dark-text mb-4 flex items-center gap-2 text-sm px-2">
-                    <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                    <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2-2v14a2 2 0 002 2z"></path></svg>
                     آلة حاسبة
                 </h3>
                 <div class="bg-slate-900 p-4 rounded-[2rem] shadow-xl border border-slate-800">
@@ -609,6 +643,9 @@
             
             <div class="flex justify-between items-center mb-3 mt-4 shrink-0 relative z-10">
                 <h3 class="font-black dark-text text-lg">سجل العمليات</h3>
+                <button id="download-individual-pdf-btn" class="text-xs bg-blue-50 text-primary px-3 py-1.5 rounded-lg font-bold hover:bg-blue-100 transition-colors shadow-sm flex items-center gap-1 border border-blue-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> تحميل PDF
+                </button>
             </div>
             <div id="history-list" class="space-y-3 overflow-y-auto hide-scrollbar flex-grow pb-4 relative z-10"></div>
         </div>
@@ -645,7 +682,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         const fbConfigFallback = {
@@ -658,7 +695,12 @@
         };
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : fbConfigFallback;
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        
+        // تفعيل وضع الأوفلاين السحابي (يعمل بدون نت ويخزن محلياً ثم يرفع للسحابة عند الاتصال)
+        const db = initializeFirestore(app, {
+            localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})
+        });
+        
         const auth = getAuth(app);
         const appIdStr = typeof __app_id !== 'undefined' ? __app_id : 'bankoki-app';
 
@@ -689,9 +731,20 @@
         let chartsInstance = { debts: null, charity: null };
         window.hasShownOverdueAlert = false; // Tracking overdue pop-up
 
+        // دالة حماية النصوص العالمية (تمنع أخطاء التصدير وتضمن استخراج الأسماء بالكامل)
+        window.escapeHTML = function(str) {
+            if(!str) return '';
+            return String(str).replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag]));
+        }
+
         // Utility Functions
         const getTodayDateString = () => new Date().toISOString().split('T')[0];
-        const formatCurrency = (num) => (num ? parseFloat(num) : 0).toLocaleString('ar-EG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+        
+        // --- الحل: استخدام تنسيق 'en-US' لضمان ظهور الأرقام بالشكل الإنجليزي (0-9) لمنع التداخل والتشوه مع النصوص ---
+        const formatCurrency = (num) => (num ? parseFloat(num) : 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+        
         const formatDate = (dateString) => {
             if(!dateString) return '';
             const date = new Date(dateString);
@@ -723,6 +776,7 @@
                 });
             }
             
+            msg += `\n(💡 تم إرفاق كشف الحساب بصيغة PDF)`;
             return encodeURIComponent(msg);
         };
 
@@ -736,9 +790,9 @@
             document.documentElement.classList.add('dark');
         }
 
-        window.showToast = (message) => {
+        window.showToast = (message, type = 'success') => {
             const toast = document.createElement('div');
-            toast.className = 'toast-msg';
+            toast.className = `toast-msg ${type === 'error' ? '!bg-red-500' : ''}`;
             toast.textContent = message;
             document.getElementById('toast-container').appendChild(toast);
             setTimeout(() => {
@@ -767,14 +821,14 @@
             return data ? { ...data, item: id ? data.list.find(d => d.id === id) : null } : { item: null, col: null };
         }
 
-        // --- NEW: Handle Image Upload & Compression ---
+        // --- Handle Image Upload & Compression ---
         window.handleImageUpload = (event, previewId, hiddenInputId, placeholderId, removeBtnId) => {
             const file = event.target.files[0];
             if (!file) return;
             
             // Validate it's an image
             if (!file.type.startsWith('image/')) {
-                showToast('يرجى اختيار ملف صورة صحيح.');
+                showToast('يرجى اختيار ملف صورة صحيح.', 'error');
                 return;
             }
 
@@ -840,7 +894,7 @@
                     }
                 } catch (ex) { console.log("Contact Picker error:", ex); }
             } else {
-                showToast('متصفحك لا يدعم جلب جهات الاتصال مباشرة. أدخل البيانات يدوياً.');
+                showToast('متصفحك لا يدعم جلب جهات الاتصال مباشرة. أدخل البيانات يدوياً.', 'error');
             }
         };
 
@@ -982,7 +1036,7 @@
                     return `
                     <div class="bg-rose-50 dark:bg-rose-900/20 p-4 rounded-2xl border border-rose-100 dark:border-rose-800/50 shadow-sm">
                         <div class="flex justify-between items-center">
-                            <span class="font-black dark-text flex items-center">${displayIcon} ${item.name}</span>
+                            <span class="font-black dark-text flex items-center">${displayIcon} ${window.escapeHTML(item.name)}</span>
                             <span class="text-[10px] font-black bg-rose-200 text-rose-800 dark:bg-rose-800 dark:text-rose-200 px-2 py-1 rounded-md">متأخر ${diffDays} يوم</span>
                         </div>
                         <p class="text-sm font-black text-slate-700 dark:text-slate-300 mt-2 flex items-center gap-1">
@@ -997,6 +1051,88 @@
                 window.hasShownOverdueAlert = true;
             }
         }
+
+        // --- تنزيل كشف حساب PDF لشخص واحد ---
+        window.downloadIndividualPDF = (type, id) => {
+            const { item } = getItemAndList(type, id);
+            if (!item) return;
+
+            if (typeof window.html2pdf === 'undefined') {
+                showToast("جاري تحميل مكتبة الطباعة، ثواني فقط...");
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                script.onload = () => window.downloadIndividualPDF(type, id);
+                document.head.appendChild(script);
+                return;
+            }
+
+            showToast("جاري تجهيز وتنزيل كشف الحساب...");
+
+            const printDiv = document.createElement('div');
+            printDiv.style.padding = '20px';
+            printDiv.style.fontFamily = "'Cairo', sans-serif";
+            printDiv.style.direction = 'rtl';
+            printDiv.style.color = '#0F172A';
+            printDiv.style.background = '#FFFFFF';
+
+            const total = calculateCurrentAmount(item);
+            const typeLabel = type === 'toMe' ? 'رصيد لك (مطلوب منه)' : (type === 'iOwe' ? 'رصيد عليك (يطلبه منك)' : 'صندوق');
+            const colorHex = type === 'toMe' ? '#10B981' : (type === 'iOwe' ? '#EF4444' : '#2563EB');
+
+            let html = `
+                <div style="text-align: center; border-bottom: 2px solid ${colorHex}; padding-bottom: 10px; margin-bottom: 20px;">
+                    <h1 style="color: ${colorHex}; margin: 0; font-size: 24px;">كشف حساب: ${window.escapeHTML(item.name)}</h1>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #64748B;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}</p>
+                    <p style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold;">القسم: ${window.escapeHTML(item.category || 'عام')}</p>
+                </div>
+                
+                <div style="background-color: #F8FAFC; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; margin-bottom: 20px; text-align: center;">
+                    <p style="margin: 0; font-size: 16px; color: #64748B;">${typeLabel}</p>
+                    <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: ${colorHex}; direction: ltr;">${formatCurrency(total)}</p>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;" border="1">
+                    <tr style="background-color: #F1F5F9;">
+                        <th style="padding: 10px; text-align: right; border: 1px solid #E2E8F0;">نوع العملية</th>
+                        <th style="padding: 10px; text-align: right; border: 1px solid #E2E8F0;">البيان</th>
+                        <th style="padding: 10px; text-align: center; border: 1px solid #E2E8F0;">المبلغ</th>
+                        <th style="padding: 10px; text-align: center; border: 1px solid #E2E8F0;">التاريخ</th>
+                    </tr>
+            `;
+
+            if (item.history && item.history.length > 0) {
+                const sortedHistory = [...item.history].sort((a, b) => new Date(b.date) - new Date(a.date));
+                sortedHistory.forEach(tx => {
+                    const txColor = tx.amount > 0 ? '#10B981' : (tx.amount < 0 ? '#EF4444' : '#64748B');
+                    const sign = tx.amount > 0 ? '+' : '';
+                    html += `
+                        <tr>
+                            <td style="padding: 10px; text-align: right; border: 1px solid #E2E8F0;">${window.escapeHTML(tx.type)}</td>
+                            <td style="padding: 10px; text-align: right; border: 1px solid #E2E8F0;">${window.escapeHTML(tx.reason || '-')}</td>
+                            <td style="padding: 10px; text-align: center; direction: ltr; font-weight: bold; color: ${txColor}; border: 1px solid #E2E8F0;">
+                                ${sign}${formatCurrency(Math.abs(tx.amount))}
+                            </td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #E2E8F0;">${formatDate(tx.date)}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                html += `<tr><td colspan="4" style="text-align: center; padding: 15px; color: #64748B;">لا توجد عمليات مسجلة</td></tr>`;
+            }
+
+            html += `</table>`;
+            printDiv.innerHTML = html;
+
+            html2pdf().set({
+                margin: 0.5,
+                filename: `كشف_حساب_${window.escapeHTML(item.name).replace(/ /g, '_')}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            }).from(printDiv).save().then(() => {
+                showToast("تم تنزيل كشف الحساب بنجاح!");
+            });
+        };
 
         // --- ENHANCED HISTORY MODAL ---
         window.openHistoryModal = (type, id) => {
@@ -1042,7 +1178,7 @@
                             <div>
                                 <p class="text-sm font-black dark-text">${tx.type || 'عملية'}</p>
                                 <p class="mt-2 flex items-center flex-wrap gap-2">
-                                    <span class="${reasonBg} border px-2.5 py-1 rounded-lg text-xs font-black shadow-sm">${tx.reason || 'بدون تفاصيل'}</span> 
+                                    <span class="${reasonBg} border px-2.5 py-1 rounded-lg text-xs font-black shadow-sm">${window.escapeHTML(tx.reason) || 'بدون تفاصيل'}</span> 
                                     <span class="text-[10px] text-gray-500 dark:text-gray-400 font-bold">${formatDate(tx.date)}</span>
                                 </p>
                             </div>
@@ -1056,6 +1192,10 @@
                     </div>`;
                 }).join('');
             }
+            
+            // تحديث زر الـ PDF ليعمل لشخص محدد
+            document.getElementById('download-individual-pdf-btn').onclick = () => window.downloadIndividualPDF(type, id);
+
             openModal('history-modal');
         };
 
@@ -1069,7 +1209,7 @@
                     await updateDoc(getDocPath(col, id), { history: newHistory });
                     showToast('تم الحذف بنجاح');
                     setTimeout(() => openHistoryModal(type, id), 350);
-                } catch(e) { showToast('حدث خطأ أثناء الحذف'); }
+                } catch(e) { showToast('حدث خطأ أثناء الحذف', 'error'); }
             });
         };
 
@@ -1201,7 +1341,7 @@
             let depts = [{name: 'عام'}, ...state.categories].filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i);
             depts.forEach(c => {
                 const isActive = state.currentDepartmentFilter === c.name;
-                html += `<button onclick="setDepartmentFilter('${c.name}')" class="whitespace-nowrap px-6 py-2.5 rounded-2xl text-sm font-black transition-all ${isActive ? 'bg-white dark:bg-slate-800 text-primary shadow-md transform scale-105 border border-slate-100 dark:border-slate-700' : 'bg-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}">${c.name}</button>`;
+                html += `<button onclick="setDepartmentFilter('${c.name}')" class="whitespace-nowrap px-6 py-2.5 rounded-2xl text-sm font-black transition-all ${isActive ? 'bg-white dark:bg-slate-800 text-primary shadow-md transform scale-105 border border-slate-100 dark:border-slate-700' : 'bg-transparent text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'}">${window.escapeHTML(c.name)}</button>`;
             });
             if(tabsContainer) tabsContainer.innerHTML = html;
         }
@@ -1239,8 +1379,8 @@
                             ${tx.image ? `<img src="${tx.image}" class="w-full h-full object-cover">` : tx.icon}
                         </div>
                         <div class="flex flex-col">
-                            <p class="font-black dark-text text-sm">${tx.itemName}</p>
-                            <p class="text-xs text-slate-500 font-bold mt-0.5 truncate w-32">${tx.reason || tx.type} • ${formatDate(tx.date)}</p>
+                            <p class="font-black dark-text text-sm">${window.escapeHTML(tx.itemName)}</p>
+                            <p class="text-xs text-slate-500 font-bold mt-0.5 truncate w-32">${window.escapeHTML(tx.reason || tx.type)} • ${formatDate(tx.date)}</p>
                         </div>
                     </div>
                     <div class="text-left flex flex-col items-end shrink-0">
@@ -1267,6 +1407,9 @@
                 
                 contactHtml = `
                 <div class="flex gap-2 mt-3 relative z-10 border-t border-white/20 pt-3">
+                    <button type="button" onclick="downloadIndividualPDF('${type}', '${item.id}')" class="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm p-2 rounded-xl text-xs font-bold text-center flex justify-center items-center gap-1 transition-colors" title="تحميل كشف حساب PDF">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> PDF
+                    </button>
                     <a href="tel:${cleanPhone}" class="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur-sm p-2 rounded-xl text-xs font-bold text-center flex justify-center items-center gap-1 transition-colors" title="اتصال بالهاتف">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg> اتصال
                     </a>
@@ -1289,8 +1432,8 @@
                                 ${item.image ? `<img src="${item.image}" class="w-full h-full object-cover">` : (item.icon || '👤')}
                             </div>
                             <div>
-                                <h3 class="font-black text-lg cursor-pointer hover:underline decoration-dashed underline-offset-4" onclick="openHistoryModal('${type}', '${item.id}')">${item.name}</h3>
-                                ${item.category ? `<span class="text-[10px] bg-black/20 px-2 py-0.5 rounded-md mt-0.5 inline-block font-bold">${item.category}</span>` : ''}
+                                <h3 class="font-black text-lg cursor-pointer hover:underline decoration-dashed underline-offset-4" onclick="openHistoryModal('${type}', '${item.id}')">${window.escapeHTML(item.name)}</h3>
+                                ${item.category ? `<span class="text-[10px] bg-black/20 px-2 py-0.5 rounded-md mt-0.5 inline-block font-bold">${window.escapeHTML(item.category)}</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -1347,8 +1490,8 @@
                             ${tx.image ? `<img src="${tx.image}" class="w-full h-full object-cover">` : tx.icon}
                         </div>
                         <div class="flex flex-col">
-                            <p class="font-black dark-text text-sm">${tx.itemName} <span class="text-[9px] bg-slate-100 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded-md font-bold mr-1">${tx.globalTypeLabel}</span></p>
-                            <p class="text-xs text-slate-500 font-bold mt-0.5 truncate w-32">${tx.reason || tx.type}</p>
+                            <p class="font-black dark-text text-sm">${window.escapeHTML(tx.itemName)} <span class="text-[9px] bg-slate-100 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded-md font-bold mr-1">${tx.globalTypeLabel}</span></p>
+                            <p class="text-xs text-slate-500 font-bold mt-0.5 truncate w-32">${window.escapeHTML(tx.reason || tx.type)}</p>
                             <p class="text-[10px] text-gray-400 font-semibold mt-0.5">${formatDate(tx.date)}</p>
                         </div>
                     </div>
@@ -1373,7 +1516,7 @@
         function renderCategories() {
             document.getElementById('categories-list').innerHTML = state.categories.map(c => `
                 <div class="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl flex justify-between items-center border border-slate-100 dark:border-slate-700/50">
-                    <span class="font-bold dark-text text-sm">${c.name}</span>
+                    <span class="font-bold dark-text text-sm">${window.escapeHTML(c.name)}</span>
                     <button type="button" onclick="deleteItem('category', '${c.id}')" class="p-1.5 text-danger hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                 </div>
             `).join('') || '<p class="text-xs dark-subtext text-center py-4 font-bold">لا توجد أقسام مسجلة</p>';
@@ -1382,7 +1525,7 @@
             if (categorySelect) {
                 let optionsHtml = '<option value="عام">عام</option>';
                 let depts = state.categories.filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i);
-                depts.forEach(c => { optionsHtml += `<option value="${c.name}">${c.name}</option>`; });
+                depts.forEach(c => { optionsHtml += `<option value="${window.escapeHTML(c.name)}">${window.escapeHTML(c.name)}</option>`; });
                 categorySelect.innerHTML = optionsHtml;
             }
         }
@@ -1424,7 +1567,7 @@
 
         function setupDataSync() {
             if(!state.userId) return;
-            const collections = { 'debtsToMe': 'toMe', 'debtsIOwe': 'iOwe', 'charityIn': 'charityIn', 'charityOut': 'charityOut', 'categories': 'categories' };
+            const collections = { 'debtsToMe': 'debtsToMe', 'debtsIOwe': 'debtsIOwe', 'charityIn': 'charityIn', 'charityOut': 'charityOut', 'categories': 'categories' };
             
             for (const [colName, type] of Object.entries(collections)) {
                 const unsubscribe = onSnapshot(getCollectionPath(colName), (snap) => {
@@ -1470,7 +1613,7 @@
                 setupColorPickers();
                 if(form.date) form.date.value = getTodayDateString();
                 if(['iOwe', 'toMe'].includes(colType)) closeAllModals();
-            } catch(e) { showToast('حدث خطأ أثناء الحفظ'); }
+            } catch(e) { showToast('حدث خطأ أثناء الحفظ', 'error'); }
             finally { btn.disabled = false; btn.textContent = originalText; }
         }
 
@@ -1490,7 +1633,7 @@
                 await updateDoc(getDocPath(getItemAndList(type).col, id), { history: arrayUnion(tx) });
                 showToast('تمت العملية بنجاح');
                 closeAllModals();
-            } catch(e) { showToast('حدث خطأ'); }
+            } catch(e) { showToast('حدث خطأ', 'error'); }
         };
 
         document.getElementById('show-register').onclick = () => { document.getElementById('login-form-container').classList.add('hidden'); document.getElementById('register-form-container').classList.remove('hidden'); };
@@ -1498,15 +1641,32 @@
 
         const handleAuth = async (action, form) => {
             const email = form[0].value; const pass = form[1].value;
+            const loadingUi = document.getElementById('loading-overlay');
+            if (loadingUi) loadingUi.classList.remove('opacity-0', 'pointer-events-none');
+            
             try {
                 if(action === 'login') await signInWithEmailAndPassword(auth, email, pass);
                 else await createUserWithEmailAndPassword(auth, email, pass);
-            } catch(e) { showToast('يرجى التأكد من صحة البيانات المدخلة'); }
+            } catch(e) { 
+                if (loadingUi) loadingUi.classList.add('opacity-0', 'pointer-events-none');
+                showToast('يرجى التأكد من صحة البيانات المدخلة', 'error'); 
+            }
         };
+        
         document.getElementById('login-form').onsubmit = (e) => { e.preventDefault(); handleAuth('login', e.target); };
         document.getElementById('register-form').onsubmit = (e) => { e.preventDefault(); handleAuth('register', e.target); };
         document.getElementById('logout-btn').onclick = () => signOut(auth);
-        document.getElementById('guest-login-btn').onclick = async () => { try { await signInAnonymously(auth); } catch (e) { showToast('حدث خطأ'); } };
+        
+        document.getElementById('guest-login-btn').onclick = async () => { 
+            const loadingUi = document.getElementById('loading-overlay');
+            if (loadingUi) loadingUi.classList.remove('opacity-0', 'pointer-events-none');
+            try { 
+                await signInAnonymously(auth); 
+            } catch (e) { 
+                if (loadingUi) loadingUi.classList.add('opacity-0', 'pointer-events-none');
+                showToast('حدث خطأ', 'error'); 
+            } 
+        };
 
         const initAuth = async () => {
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -1518,6 +1678,8 @@
             state.firestoreListeners.forEach(u => u()); state.firestoreListeners = [];
             const appUi = document.getElementById('app-container');
             const authUi = document.getElementById('auth-screen');
+            const loadingUi = document.getElementById('loading-overlay');
+
             if (user) {
                 state.userId = user.uid;
                 appUi.classList.remove('hidden'); appUi.classList.add('flex');
@@ -1529,6 +1691,9 @@
                 authUi.style.display = 'flex';
                 window.hasShownOverdueAlert = false; // Reset on logout
             }
+            
+            // إخفاء دائرة التحميل هنا بعد فحص حالة المستخدم
+            if (loadingUi) loadingUi.classList.add('opacity-0', 'pointer-events-none');
         });
 
         document.getElementById('add-transaction-form').onsubmit = (e) => handleFormSubmit(e, e.target['debt-type'].value);
@@ -1540,7 +1705,7 @@
             try {
                 await addDoc(getCollectionPath('categories'), { name: e.target.categoryName.value });
                 showToast('تم إضافة القسم بنجاح'); e.target.reset();
-            } catch(e) { showToast('خطأ في الإضافة'); }
+            } catch(e) { showToast('خطأ في الإضافة', 'error'); }
         };
 
         document.getElementById('edit-info-form').onsubmit = async (e) => {
@@ -1555,7 +1720,7 @@
                     phone: document.getElementById('edit-info-phone').value 
                 });
                 showToast('تم التعديل بنجاح'); closeAllModals();
-            } catch(err) { showToast('حدث خطأ'); }
+            } catch(err) { showToast('حدث خطأ', 'error'); }
         };
 
         const setupCalc = () => {
@@ -1581,7 +1746,315 @@
             });
         };
 
-        window.exportDataToCSV = () => { showToast("سيتم تجهيز التقرير قريباً..."); };
+        // --- التصدير لملف إكسيل Excel (النسخة الاحترافية المنظمة) ---
+        window.exportDataToCSV = () => {
+            if (state.debtsToMe.length === 0 && state.debtsIOwe.length === 0 && state.charityIn.length === 0 && state.charityOut.length === 0) {
+                showToast("لا توجد بيانات لتصديرها!", "error");
+                return;
+            }
+            showToast("جاري تجهيز وتنزيل ملف Excel...");
+            
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            csvContent += "القسم,تصنيف الحساب,الاسم / الجهة,إجمالي الرصيد,تاريخ العملية,نوع العملية,تفاصيل العملية,مبلغ العملية\n";
+            
+            const appendData = (dataList, classification) => {
+                if(!dataList) return;
+                dataList.forEach(item => {
+                    const total = calculateCurrentAmount(item);
+                    const category = `"${window.escapeHTML(item.category || 'عام')}"`;
+                    const classificationStr = `"${classification}"`;
+                    const name = `"${window.escapeHTML(item.name).replace(/"/g, '""')}"`;
+                    const totalStr = `"${total}"`;
+
+                    csvContent += `${category},${classificationStr},${name},${totalStr},,,,\n`;
+
+                    if (item.history && item.history.length > 0) {
+                        const sortedHistory = [...item.history].sort((a, b) => new Date(b.date) - new Date(a.date));
+                        sortedHistory.forEach(tx => {
+                            const date = `"${new Date(tx.date).toLocaleDateString('ar-EG')}"`;
+                            const type = `"${window.escapeHTML(tx.type)}"`;
+                            const reason = `"${window.escapeHTML(tx.reason || tx.type).replace(/"/g, '""')}"`;
+                            const amount = `"${tx.amount}"`;
+                            
+                            csvContent += `,,,,${date},${type},${reason},${amount}\n`;
+                        });
+                    }
+                });
+            };
+
+            appendData(state.debtsToMe, 'أرصدة لك (تطلبها)');
+            appendData(state.debtsIOwe, 'أرصدة عليك (مطلوبة منك)');
+            appendData(state.charityIn, 'صندوق الخير (وارد)');
+            appendData(state.charityOut, 'صندوق الخير (منصرف)');
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Bankoki_Records_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            closeSideMenu();
+        };
+
+        // --- تنزيل PDF الاحترافي (المقسم بالأسماء) ---
+        window.downloadPDF = () => {
+            if (state.debtsToMe.length === 0 && state.debtsIOwe.length === 0 && state.charityIn.length === 0 && state.charityOut.length === 0) {
+                showToast("لا توجد بيانات للطباعة!", "error");
+                return;
+            }
+            
+            if (typeof window.html2pdf === 'undefined') {
+                showToast("جاري تحميل مكتبة الطباعة، ثواني فقط...");
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                script.onload = () => window.downloadPDF();
+                document.head.appendChild(script);
+                return;
+            }
+
+            showToast("جاري تجهيز وتنزيل الملف PDF...");
+
+            const printDiv = document.createElement('div');
+            printDiv.style.padding = '20px';
+            printDiv.style.fontFamily = "'Cairo', sans-serif";
+            printDiv.style.direction = 'rtl';
+            printDiv.style.color = '#0F172A';
+            printDiv.style.background = '#FFFFFF';
+            
+            let html = `
+                <div style="text-align: center; border-bottom: 2px solid #2563EB; padding-bottom: 10px; margin-bottom: 20px;">
+                    <h1 style="color: #2563EB; margin: 0; font-size: 24px;">بنكوكي - التقرير الشامل المفصل</h1>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #64748B;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}</p>
+                </div>
+            `;
+
+            const generateSection = (title, dataList, colorHex) => {
+                if (!dataList || dataList.length === 0) return '';
+                
+                let sectionHtml = `
+                    <h2 style="color: ${colorHex}; border-bottom: 1px solid ${colorHex}; padding-bottom: 5px; margin-top: 20px; font-size: 18px;">${title}</h2>
+                `;
+
+                dataList.forEach(item => {
+                    const total = calculateCurrentAmount(item);
+                    sectionHtml += `
+                        <div style="margin-bottom: 15px; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px; page-break-inside: avoid;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background-color: #F8FAFC; padding: 8px; border-radius: 6px;">
+                                <div>
+                                    <strong style="font-size: 16px;">${window.escapeHTML(item.name)}</strong>
+                                    <span style="font-size: 11px; color: #64748B; margin-right: 10px;">(القسم: ${window.escapeHTML(item.category || 'عام')})</span>
+                                </div>
+                                <div style="font-weight: bold; font-size: 16px; color: ${colorHex}; direction: ltr;">
+                                    إجمالي الرصيد: ${formatCurrency(total)}
+                                </div>
+                            </div>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;" border="1">
+                                <tr style="background-color: #F1F5F9;">
+                                    <th style="padding: 6px; text-align: right; border: 1px solid #E2E8F0;">نوع العملية</th>
+                                    <th style="padding: 6px; text-align: right; border: 1px solid #E2E8F0;">التفاصيل / السبب</th>
+                                    <th style="padding: 6px; text-align: center; border: 1px solid #E2E8F0;">المبلغ</th>
+                                    <th style="padding: 6px; text-align: center; border: 1px solid #E2E8F0;">التاريخ</th>
+                                </tr>
+                    `;
+
+                    if (item.history && item.history.length > 0) {
+                        const sortedHistory = [...item.history].sort((a, b) => new Date(b.date) - new Date(a.date));
+                        sortedHistory.forEach(tx => {
+                            const txColor = tx.amount > 0 ? '#10B981' : (tx.amount < 0 ? '#EF4444' : '#64748B');
+                            const sign = tx.amount > 0 ? '+' : '';
+                            sectionHtml += `
+                                <tr>
+                                    <td style="padding: 6px; text-align: right; border: 1px solid #E2E8F0;">${window.escapeHTML(tx.type)}</td>
+                                    <td style="padding: 6px; text-align: right; border: 1px solid #E2E8F0;">${window.escapeHTML(tx.reason || '-')}</td>
+                                    <td style="padding: 6px; text-align: center; direction: ltr; font-weight: bold; color: ${txColor}; border: 1px solid #E2E8F0;">
+                                        ${sign}${formatCurrency(Math.abs(tx.amount))}
+                                    </td>
+                                    <td style="padding: 6px; text-align: center; border: 1px solid #E2E8F0;">${formatDate(tx.date)}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        sectionHtml += `<tr><td colspan="4" style="text-align: center; padding: 10px; color: #64748B;">لا توجد عمليات</td></tr>`;
+                    }
+
+                    sectionHtml += `</table></div>`;
+                });
+                return sectionHtml;
+            };
+
+            html += generateSection('أرصدة لك (تطلبها)', state.debtsToMe, '#10B981');
+            html += generateSection('أرصدة عليك (مطلوبة منك)', state.debtsIOwe, '#EF4444');
+            html += generateSection('صندوق الخير (تبرعات واردة)', state.charityIn, '#3B82F6');
+            html += generateSection('صندوق الخير (مصروفات)', state.charityOut, '#F59E0B');
+
+            printDiv.innerHTML = html;
+
+            html2pdf().set({
+                margin: 0.4,
+                filename: 'Bankoki_Detailed_Report.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            }).from(printDiv).save().then(() => {
+                closeSideMenu();
+                showToast("تم تنزيل التقرير بنجاح!");
+            }).catch(e => showToast("حدث خطأ أثناء التنزيل", "error"));
+        };
+
+        // --- تنزيل كشف حساب PDF لشخص واحد ---
+        window.downloadIndividualPDF = (type, id) => {
+            const { item } = getItemAndList(type, id);
+            if (!item) return;
+
+            if (typeof window.html2pdf === 'undefined') {
+                showToast("جاري تحميل مكتبة الطباعة، ثواني فقط...");
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                script.onload = () => window.downloadIndividualPDF(type, id);
+                document.head.appendChild(script);
+                return;
+            }
+
+            showToast("جاري تجهيز وتنزيل كشف الحساب...");
+
+            const printDiv = document.createElement('div');
+            printDiv.style.padding = '20px';
+            printDiv.style.fontFamily = "'Cairo', sans-serif";
+            printDiv.style.direction = 'rtl';
+            printDiv.style.color = '#0F172A';
+            printDiv.style.background = '#FFFFFF';
+
+            const total = calculateCurrentAmount(item);
+            const typeLabel = type === 'toMe' ? 'رصيد لك (مطلوب منه)' : (type === 'iOwe' ? 'رصيد عليك (يطلبه منك)' : 'صندوق');
+            const colorHex = type === 'toMe' ? '#10B981' : (type === 'iOwe' ? '#EF4444' : '#2563EB');
+
+            let html = `
+                <div style="text-align: center; border-bottom: 2px solid ${colorHex}; padding-bottom: 10px; margin-bottom: 20px;">
+                    <h1 style="color: ${colorHex}; margin: 0; font-size: 24px;">كشف حساب: ${window.escapeHTML(item.name)}</h1>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #64748B;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}</p>
+                    <p style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold;">القسم: ${window.escapeHTML(item.category || 'عام')}</p>
+                </div>
+                
+                <div style="background-color: #F8FAFC; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; margin-bottom: 20px; text-align: center;">
+                    <p style="margin: 0; font-size: 16px; color: #64748B;">${typeLabel}</p>
+                    <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: ${colorHex}; direction: ltr;">${formatCurrency(total)}</p>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;" border="1">
+                    <tr style="background-color: #F1F5F9;">
+                        <th style="padding: 10px; text-align: right; border: 1px solid #E2E8F0;">نوع العملية</th>
+                        <th style="padding: 10px; text-align: right; border: 1px solid #E2E8F0;">البيان</th>
+                        <th style="padding: 10px; text-align: center; border: 1px solid #E2E8F0;">المبلغ</th>
+                        <th style="padding: 10px; text-align: center; border: 1px solid #E2E8F0;">التاريخ</th>
+                    </tr>
+            `;
+
+            if (item.history && item.history.length > 0) {
+                const sortedHistory = [...item.history].sort((a, b) => new Date(b.date) - new Date(a.date));
+                sortedHistory.forEach(tx => {
+                    const txColor = tx.amount > 0 ? '#10B981' : (tx.amount < 0 ? '#EF4444' : '#64748B');
+                    const sign = tx.amount > 0 ? '+' : '';
+                    html += `
+                        <tr>
+                            <td style="padding: 10px; text-align: right; border: 1px solid #E2E8F0;">${window.escapeHTML(tx.type)}</td>
+                            <td style="padding: 10px; text-align: right; border: 1px solid #E2E8F0;">${window.escapeHTML(tx.reason || '-')}</td>
+                            <td style="padding: 10px; text-align: center; direction: ltr; font-weight: bold; color: ${txColor}; border: 1px solid #E2E8F0;">
+                                ${sign}${formatCurrency(Math.abs(tx.amount))}
+                            </td>
+                            <td style="padding: 10px; text-align: center; border: 1px solid #E2E8F0;">${formatDate(tx.date)}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                html += `<tr><td colspan="4" style="text-align: center; padding: 15px; color: #64748B;">لا توجد عمليات مسجلة</td></tr>`;
+            }
+
+            html += `</table>`;
+            printDiv.innerHTML = html;
+
+            html2pdf().set({
+                margin: 0.5,
+                filename: `كشف_حساب_${window.escapeHTML(item.name).replace(/ /g, '_')}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            }).from(printDiv).save().then(() => {
+                showToast("تم تنزيل كشف الحساب بنجاح!");
+            });
+        };
+
+        // --- ميزة تنزيل نسخة احتياطية (تصدير لملف JSON) كأمان إضافي ---
+        window.exportDataToJSON = () => {
+            const dataToExport = {
+                app: "Bankoki",
+                exportDate: new Date().toISOString(),
+                debtsToMe: state.debtsToMe,
+                debtsIOwe: state.debtsIOwe,
+                charityIn: state.charityIn,
+                charityOut: state.charityOut,
+                categories: state.categories
+            };
+            const dataStr = JSON.stringify(dataToExport);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Bankoki_Backup_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("تم تنزيل النسخة الاحتياطية بأمان!");
+            closeSideMenu();
+        };
+
+        // --- ميزة استرجاع البيانات (استيراد من ملف JSON) ---
+        window.importDataFromJSON = async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!state.userId) {
+                showToast("يجب تسجيل الدخول أولاً لاسترجاع البيانات!", "error");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.app !== "Bankoki") {
+                        showToast("هذا الملف لا يخص تطبيق بنكوكي!", "error");
+                        return;
+                    }
+                    
+                    showToast("جاري رفع واسترجاع البيانات للسحابة...");
+
+                    const uploadCollection = async (dataArray, colName) => {
+                        if(!dataArray || !Array.isArray(dataArray)) return;
+                        const colRef = getCollectionPath(colName);
+                        for(const item of dataArray) {
+                            const { id, ...itemWithoutId } = item; 
+                            await addDoc(colRef, itemWithoutId);
+                        }
+                    };
+
+                    await uploadCollection(parsed.categories, 'categories');
+                    await uploadCollection(parsed.debtsToMe, 'debtsToMe');
+                    await uploadCollection(parsed.debtsIOwe, 'debtsIOwe');
+                    await uploadCollection(parsed.charityIn, 'charityIn');
+                    await uploadCollection(parsed.charityOut, 'charityOut');
+
+                    showToast("تم استرجاع البيانات بنجاح!");
+                    closeSideMenu();
+                } catch (err) {
+                    console.error(err);
+                    showToast("حدث خطأ، ملف غير صالح!", "error");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // تصفير الحقل
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             initAuth();
