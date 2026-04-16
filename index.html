@@ -593,7 +593,21 @@
                     <input type="text" id="edit-info-icon" placeholder="أو 👤" class="w-16 p-4 rounded-2xl input-modern text-center text-xl" maxlength="2">
                     <input type="text" id="edit-info-name" placeholder="الاسم" class="flex-1 p-4 rounded-2xl input-modern font-bold" required>
                 </div>
-                <div class="relative">
+                
+                <div id="edit-info-dept-container" class="flex gap-3">
+                    <div class="w-1/2">
+                        <label class="text-xs font-bold text-slate-500 mb-1 block px-1">القسم</label>
+                        <select id="edit-info-category" name="category" class="w-full p-4 rounded-2xl input-modern text-sm font-bold text-slate-700 dark:text-slate-300">
+                            <option value="عام">عام</option>
+                        </select>
+                    </div>
+                    <div class="w-1/2">
+                        <label class="text-xs font-bold text-slate-500 mb-1 block px-1">تاريخ السداد</label>
+                        <input type="date" id="edit-info-dueDate" name="dueDate" class="w-full p-4 rounded-2xl input-modern text-sm font-bold">
+                    </div>
+                </div>
+
+                <div id="edit-info-phone-container" class="relative">
                     <input type="tel" id="edit-info-phone" placeholder="رقم الهاتف (اختياري)" class="w-full p-4 rounded-2xl input-modern text-left pr-14 font-medium tracking-wider" dir="ltr">
                     <button type="button" onclick="pickContact('edit-info-phone', 'edit-info-name')" class="absolute right-2 top-1/2 -translate-y-1/2 p-2.5 text-primary bg-blue-50 dark:bg-blue-900/30 rounded-xl hover:bg-blue-100 transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
@@ -739,6 +753,12 @@
             }[tag]));
         }
 
+        // دالة مخصصة لملفات CSV لتفادي تشوه الرموز
+        const escapeCSV = (str) => {
+            if (!str) return '';
+            return String(str).replace(/"/g, '""');
+        };
+
         // Utility Functions
         const getTodayDateString = () => new Date().toISOString().split('T')[0];
         
@@ -864,6 +884,9 @@
                     previewEl.classList.remove('hidden');
                     document.getElementById(placeholderId).classList.add('hidden');
                     if (removeBtnId) document.getElementById(removeBtnId).classList.remove('hidden');
+                    
+                    // Allow the user to select the exact same file again later if needed
+                    event.target.value = '';
                 };
                 img.src = e.target.result;
             };
@@ -876,9 +899,6 @@
             document.getElementById(previewId).classList.add('hidden');
             document.getElementById(placeholderId).classList.remove('hidden');
             if(removeBtnId) document.getElementById(removeBtnId).classList.add('hidden');
-            // Clear input file value so user can select same file again if needed
-            const inputs = document.querySelectorAll('input[type="file"]');
-            inputs.forEach(i => i.value = '');
         };
 
         window.pickContact = async (phoneInputId, nameInputId) => {
@@ -1242,9 +1262,29 @@
             if (!item) return;
             state.currentItemInfo = { type, id, item };
             document.getElementById('edit-info-name').value = item.name || '';
-            document.getElementById('edit-info-phone').value = item.phone || '';
             document.getElementById('edit-info-icon').value = item.icon || '';
             
+            const isDebt = type === 'toMe' || type === 'iOwe';
+            
+            if (isDebt) {
+                document.getElementById('edit-info-phone-container').style.display = 'block';
+                document.getElementById('edit-info-dept-container').style.display = 'flex';
+                document.getElementById('edit-info-phone').value = item.phone || '';
+                
+                // تحديث قائمة الأقسام
+                const catSelect = document.getElementById('edit-info-category');
+                let optionsHtml = '<option value="عام">عام</option>';
+                let depts = state.categories.filter((v,i,a)=>a.findIndex(t=>(t.name === v.name))===i);
+                depts.forEach(c => { optionsHtml += `<option value="${window.escapeHTML(c.name)}">${window.escapeHTML(c.name)}</option>`; });
+                catSelect.innerHTML = optionsHtml;
+                catSelect.value = item.category || 'عام';
+                
+                document.getElementById('edit-info-dueDate').value = item.dueDate || '';
+            } else {
+                document.getElementById('edit-info-phone-container').style.display = 'none';
+                document.getElementById('edit-info-dept-container').style.display = 'none';
+            }
+
             // Set image preview if exists
             if (item.image) {
                 document.getElementById('edit-imageBase64').value = item.image;
@@ -1712,13 +1752,23 @@
             e.preventDefault();
             if (!state.currentItemInfo || !state.userId) return;
             try {
-                await updateDoc(getDocPath(getItemAndList(state.currentItemInfo.type).col, state.currentItemInfo.id), { 
+                const { type, id } = state.currentItemInfo;
+                const isDebt = type === 'toMe' || type === 'iOwe';
+                
+                let updateData = { 
                     name: document.getElementById('edit-info-name').value, 
                     icon: document.getElementById('edit-info-icon').value,
                     image: document.getElementById('edit-imageBase64').value,
-                    colorId: document.getElementById('edit-tx-color').value,
-                    phone: document.getElementById('edit-info-phone').value 
-                });
+                    colorId: document.getElementById('edit-tx-color').value
+                };
+
+                if (isDebt) {
+                    updateData.phone = document.getElementById('edit-info-phone').value;
+                    updateData.category = document.getElementById('edit-info-category').value;
+                    updateData.dueDate = document.getElementById('edit-info-dueDate').value || null;
+                }
+
+                await updateDoc(getDocPath(getItemAndList(type).col, id), updateData);
                 showToast('تم التعديل بنجاح'); closeAllModals();
             } catch(err) { showToast('حدث خطأ', 'error'); }
         };
@@ -1761,9 +1811,9 @@
                 if(!dataList) return;
                 dataList.forEach(item => {
                     const total = calculateCurrentAmount(item);
-                    const category = `"${window.escapeHTML(item.category || 'عام')}"`;
+                    const category = `"${escapeCSV(item.category || 'عام')}"`;
                     const classificationStr = `"${classification}"`;
-                    const name = `"${window.escapeHTML(item.name).replace(/"/g, '""')}"`;
+                    const name = `"${escapeCSV(item.name)}"`;
                     const totalStr = `"${total}"`;
 
                     csvContent += `${category},${classificationStr},${name},${totalStr},,,,\n`;
@@ -1772,8 +1822,8 @@
                         const sortedHistory = [...item.history].sort((a, b) => new Date(b.date) - new Date(a.date));
                         sortedHistory.forEach(tx => {
                             const date = `"${new Date(tx.date).toLocaleDateString('ar-EG')}"`;
-                            const type = `"${window.escapeHTML(tx.type)}"`;
-                            const reason = `"${window.escapeHTML(tx.reason || tx.type).replace(/"/g, '""')}"`;
+                            const type = `"${escapeCSV(tx.type)}"`;
+                            const reason = `"${escapeCSV(tx.reason || tx.type)}"`;
                             const amount = `"${tx.amount}"`;
                             
                             csvContent += `,,,,${date},${type},${reason},${amount}\n`;
